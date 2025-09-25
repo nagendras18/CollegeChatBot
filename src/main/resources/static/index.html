@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive College Chatbot</title>
+    <!-- Use Tailwind CSS for rapid styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 1rem;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            height: 100%;
+            max-height: 800px;
+            background-color: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            background-color: #3b82f6;
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+            border-top-left-radius: 1.5rem;
+            border-top-right-radius: 1.5rem;
+            font-weight: 600;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .message {
+            max-width: 85%;
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
+            word-wrap: break-word;
+        }
+        .user-message {
+            align-self: flex-end;
+            background-color: #d1e7ff;
+            color: #1f2937;
+            border-bottom-right-radius: 0.25rem;
+        }
+        .bot-message {
+            align-self: flex-start;
+            background-color: #f3f4f6;
+            color: #1f2937;
+            border-bottom-left-radius: 0.25rem;
+        }
+        .chat-input {
+            display: flex;
+            padding: 1rem;
+            background-color: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+        }
+        .chat-input input {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .chat-input input:focus {
+            border-color: #3b82f6;
+        }
+        .chat-input button {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 1rem;
+            margin-left: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        .chat-input button:hover {
+            background-color: #2563eb;
+        }
+        .chat-input button:active {
+            transform: scale(0.98);
+        }
+        .loading-dots {
+            display: none;
+            align-self: flex-start;
+            padding: 0.75rem 1rem;
+        }
+        .loading-dot {
+            height: 10px;
+            width: 10px;
+            background-color: #9ca3af;
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .loading-dot:nth-child(2) {
+            animation-delay: -0.32s;
+        }
+        .loading-dot:nth-child(3) {
+            animation-delay: -0.16s;
+        }
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1.0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        College Chatbot
+    </div>
+    <div id="chat-messages" class="chat-messages">
+        <!-- Initial welcome message -->
+        <div class="message bot-message">Hello! I am the college chatbot. Ask me about fees, placements, library, or hostel.</div>
+    </div>
+    <div class="chat-input">
+        <input type="text" id="user-input" placeholder="Type your question..." />
+        <button id="send-button">Send</button>
+    </div>
+</div>
+
+<script>
+    const chatMessages = document.getElementById('chat-messages');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+
+    // Function to append a new message to the chat
+    function addMessage(text, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.textContent = text;
+        messageDiv.classList.add('message');
+        if (sender === 'user') {
+            messageDiv.classList.add('user-message');
+        } else {
+            messageDiv.classList.add('bot-message');
+        }
+        chatMessages.appendChild(messageDiv);
+        // Automatically scroll to the bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Function to get the chatbot's response from the server
+    async function getBotResponse(question) {
+        // Create a loading message
+        const loadingMessage = document.createElement('div');
+        loadingMessage.classList.add('loading-dots');
+        loadingMessage.innerHTML = '<span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>';
+        chatMessages.appendChild(loadingMessage);
+
+        try {
+            const response = await fetch(`http://localhost:8080/ask?question=${encodeURIComponent(question)}`);
+            const answer = await response.text();
+            addMessage(answer, 'bot');
+        } catch (error) {
+            console.error('Error fetching response:', error);
+            addMessage('I am having trouble connecting. Please try again later.', 'bot');
+        } finally {
+            // Remove loading message
+            chatMessages.removeChild(loadingMessage);
+        }
+    }
+
+    // Function to handle sending a message
+    function sendMessage() {
+        const userQuestion = userInput.value.trim();
+        if (userQuestion === '') {
+            return;
+        }
+
+        // Add user message to chat log
+        addMessage(userQuestion, 'user');
+        
+        // Clear the input field
+        userInput.value = '';
+
+        // Get bot response from server
+        getBotResponse(userQuestion);
+    }
+
+    // Attach event listeners
+    sendButton.addEventListener('click', sendMessage);
+    userInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+</script>
+
+</body>
+</html>
